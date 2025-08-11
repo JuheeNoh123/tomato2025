@@ -18,7 +18,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 
 import java.nio.charset.StandardCharsets;
-import java.util.List;
+
 
 @Configuration
 @EnableMethodSecurity
@@ -59,10 +59,10 @@ public class SecurityConfig {
 //                        .accessDeniedHandler(accessDeniedHandler()) // 인증은 되었지만 권한이 없는 사용자가 접근시 403응답을 주는 로직
             )
                 .authorizeHttpRequests(auth -> auth // 엔드포인트별 접근 권한 설정
-                        .requestMatchers("/auth/**").permitAll() // 누구나 접근가능
+                        .requestMatchers("/auth/**","/user/signup", "/user/login", "/error").permitAll() // 누구나 접근 가능한 API 경로
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()  //Swagger 문서관련 누구나 접근가능
-                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // CORS preflight요청은 누구나 접근가능
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // CORS preflight 요청은 누구나 접근가능
                         .anyRequest().authenticated() //나머지는 JWT 인증 필요
                 )
                 //Spring Security의 기본 UsernamePasswordAuthenticationFilter 전에 JWT 인증 필터를 실행하도록 설정
