@@ -28,7 +28,7 @@ public class UserController {
         return ResponseEntity.status(HttpStatus.CREATED).body(token);
     }
 
-    @PostMapping
+    @PostMapping("/login")
     public ResponseEntity<String> login(@RequestBody UserDTO.Login req){
         String token = userService.login(req);
         return ResponseEntity.ok(token);
