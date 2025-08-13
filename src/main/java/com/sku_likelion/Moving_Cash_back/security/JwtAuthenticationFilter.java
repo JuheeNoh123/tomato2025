@@ -1,5 +1,8 @@
 package com.sku_likelion.Moving_Cash_back.security;
 
+import com.sku_likelion.Moving_Cash_back.domain.User;
+import com.sku_likelion.Moving_Cash_back.exception.InvalidUserException;
+import com.sku_likelion.Moving_Cash_back.repository.UserRepository;
 import com.sku_likelion.Moving_Cash_back.service.UserService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -20,6 +23,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 
 @Component
 @RequiredArgsConstructor
@@ -27,6 +31,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtility jwtUtility;
     private final UserService userService;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
@@ -48,10 +53,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             Claims claims = jwtUtility.getClaimsFromJwt(checkToken);
             String userId = claims.getSubject();
 
-            UserDetails userDetails = userService.loadUserByUserId(userId);
+            //UserDetails userDetails = userService.loadUserByUserId(userId);
+            User user = userRepository.findByUserId(userId).orElseThrow(() -> new InvalidUserException("잘못된 사용자 Id"));
 
             UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                    userDetails, null, userDetails.getAuthorities());
+                    user, null, Collections.emptyList());
             authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
             org.springframework.security.core.context.SecurityContextHolder.getContext()
