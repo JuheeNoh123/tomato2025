@@ -1,5 +1,6 @@
 package com.sku_likelion.Moving_Cash_back.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -26,6 +27,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HandleJwtException.class)
     public ResponseEntity<String> handleJwt(HandleJwtException e){
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(e.getMessage());
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<String> handleDataIntegrityViolation(DataIntegrityViolationException e) {
+        String dbMessage = e.getMostSpecificCause().getMessage();
+
+        // 제약 조건 이름에 따라 메시지 매핑
+        if (dbMessage.contains("uk_user_challenge")) {
+            return ResponseEntity.badRequest().body("이미 참여한 챌린지입니다.");
+        } else if (dbMessage.contains("uk_session_point")) {
+            return ResponseEntity.badRequest().body("이미 해당 포인트가 존재합니다.");
+        }
+
+        // 기본 메시지 (그 외 제약 조건 위반)
+        return ResponseEntity.badRequest().body("데이터 제약 조건 위반 발생");
     }
 
 }
