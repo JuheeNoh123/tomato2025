@@ -41,14 +41,18 @@ public class RoutePoint {
     @Column(name = "point_index", nullable = false)
     private Long pointIndex;
 
+    @Column(nullable = false)
+    private Long step;
+
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
-    public RoutePoint(Session session, BigDecimal lat, BigDecimal lng, Long pointIndex){
+    public RoutePoint(Session session, BigDecimal lat, BigDecimal lng, Long pointIndex, Long step){
         this.session = session;
         this.lat = lat;
         this.lng = lng;
         this.pointIndex = pointIndex;
+        this.step = step;
     }
 }

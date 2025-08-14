@@ -17,13 +17,13 @@ public class MovingController {
     private final MovingService movingService;
 
     @GetMapping("/getpoints")
-    public ResponseEntity<MovingResDTO.getPointsDTO> getPoints(@AuthenticationPrincipal User user) {
-        MovingResDTO.getPointsDTO res = movingService.getPoints(user);
+    public ResponseEntity<MovingResDTO.GetPointsDTO> getPoints(@AuthenticationPrincipal User user) {
+        MovingResDTO.GetPointsDTO res = movingService.getPoints(user);
         return ResponseEntity.ok(res);
     }
 
     @PostMapping("/start")
-    public ResponseEntity<MovingResDTO.SessionStartDTO> start(@AuthenticationPrincipal User user, @RequestBody MovingReqDTO.statusDTO dto) {
+    public ResponseEntity<MovingResDTO.SessionStartDTO> start(@AuthenticationPrincipal User user, @RequestBody MovingReqDTO.StatusDTO dto) {
         MovingResDTO.SessionStartDTO sessionStartDTO = movingService.start(user,dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(sessionStartDTO);
     }
