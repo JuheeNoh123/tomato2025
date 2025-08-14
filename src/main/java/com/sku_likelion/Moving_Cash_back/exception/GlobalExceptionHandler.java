@@ -44,4 +44,9 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body("데이터 제약 조건 위반 발생");
     }
 
+    @ExceptionHandler(InvalidChallengeException.class)
+    public ResponseEntity<String> invalidChallenge(InvalidChallengeException e){
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
+    }
+
 }
