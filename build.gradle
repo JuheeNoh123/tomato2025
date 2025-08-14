@@ -43,8 +43,15 @@ dependencies {
 	// swagger
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
 
-	implementation(group: "io.netty", name: "netty-resolver-dns-native-macos", classifier: "osx-aarch_64")
 
+	implementation(group: "io.netty", name: "netty-resolver-dns-native-macos", classifier: "osx-aarch_64")
+  
+	//websocket
+	implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis-reactive' // 필요시
+	implementation 'org.apache.commons:commons-pool2' // 커넥션 풀
 }
 
 tasks.named('test') {

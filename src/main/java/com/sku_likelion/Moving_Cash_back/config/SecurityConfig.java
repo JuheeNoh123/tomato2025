@@ -60,6 +60,7 @@ public class SecurityConfig {
             )
                 .authorizeHttpRequests(auth -> auth // 엔드포인트별 접근 권한 설정
                         .requestMatchers("/auth/**","/user/signup", "/user/login", "/error").permitAll() // 누구나 접근 가능한 API 경로
+                        .requestMatchers("/ws/**").permitAll()  // WebSocket 핸드쉐이크 허용
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()  //Swagger 문서관련 누구나 접근가능
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() // CORS preflight 요청은 누구나 접근가능
