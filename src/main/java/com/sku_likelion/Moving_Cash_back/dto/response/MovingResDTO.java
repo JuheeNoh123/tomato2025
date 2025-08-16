@@ -11,9 +11,10 @@ import java.time.LocalDateTime;
 public class MovingResDTO {
 
     @Data
-    public static class GetPointsDTO {
+    public static class GetPointAndStepDTO {
         private String name;
-        private Long points;
+        private Long point;
+        private Long step;
     }
 
     @Data
@@ -36,5 +37,16 @@ public class MovingResDTO {
         private double pace; // min/km
         private Long points; // 실시간 포인트
 
+    }
+
+    @Data
+    @AllArgsConstructor
+    public static class SessionEndDTO {
+        private double totalCalories;
+        private double totalDistance;
+        private Long steps;
+        private double pace;
+        private String duration;
+        private Long points;
     }
 }

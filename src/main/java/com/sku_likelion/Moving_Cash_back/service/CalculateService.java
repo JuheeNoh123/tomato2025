@@ -68,8 +68,11 @@ public class CalculateService {
         double pace = totalMinutes / distanceKm;
         stats.setPace(pace);
 
-        // 포인트 개수 1 증가 (좌표 갯수 카운트)
-        stats.setPoints(stats.getPoints() + 1); // 포인트는 단순 카운트
+
+        // 포인트 카운트는 "이전 좌표와 10m 이상 차이"일 때만 증가
+        if (distance >= 0.01) { // 0.01 km = 10m
+            stats.setPoints(stats.getPoints() + 1);
+        }
 
         // Redis에 갱신된 통계 저장
         redisTemplate.opsForValue().set(redisKey, stats);

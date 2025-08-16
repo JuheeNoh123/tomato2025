@@ -16,9 +16,9 @@ import org.springframework.web.bind.annotation.*;
 public class MovingController {
     private final MovingService movingService;
 
-    @GetMapping("/getpoints")
-    public ResponseEntity<MovingResDTO.GetPointsDTO> getPoints(@AuthenticationPrincipal User user) {
-        MovingResDTO.GetPointsDTO res = movingService.getPoints(user);
+    @GetMapping("/getPointAndStep")
+    public ResponseEntity<MovingResDTO.GetPointAndStepDTO> getPointAndStep(@AuthenticationPrincipal User user) {
+        MovingResDTO.GetPointAndStepDTO res = movingService.getPointAndStep(user);
         return ResponseEntity.ok(res);
     }
 
@@ -26,5 +26,11 @@ public class MovingController {
     public ResponseEntity<MovingResDTO.SessionStartDTO> start(@AuthenticationPrincipal User user, @RequestBody MovingReqDTO.StatusDTO dto) {
         MovingResDTO.SessionStartDTO sessionStartDTO = movingService.start(user,dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(sessionStartDTO);
+    }
+
+    @PostMapping("/end")
+    public ResponseEntity<MovingResDTO.SessionEndDTO> end(@AuthenticationPrincipal User user, @RequestBody MovingReqDTO.SessionEndDTO dto) {
+        MovingResDTO.SessionEndDTO sessionEndDTO = movingService.end(user,dto);
+        return ResponseEntity.status(HttpStatus.CREATED).body(sessionEndDTO);
     }
 }

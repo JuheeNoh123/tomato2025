@@ -4,6 +4,7 @@ import com.sku_likelion.Moving_Cash_back.enums.ActivityType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
@@ -30,6 +31,7 @@ public class Session {
     private LocalDateTime startTime;
 
     @Column(name = "end_time")
+    @Setter
     private LocalDateTime endTime;
 
     public Session(User user, ActivityType status, LocalDateTime startTime){

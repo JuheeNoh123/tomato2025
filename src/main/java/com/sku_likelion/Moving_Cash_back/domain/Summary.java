@@ -27,10 +27,10 @@ public class Summary {
     private User user;
 
     @Column(name = "total_calories", nullable = false)
-    private Long totalCalories;
+    private Double totalCalories;
 
-    @Column(name = "total_distance", nullable = false, precision = 4, scale = 1)
-    private BigDecimal totalDistance;
+    @Column(name = "total_distance", nullable = false)
+    private Double totalDistance;
 
     @Column(name = "total_time", nullable = false)
     private String totalTime;
@@ -38,8 +38,8 @@ public class Summary {
     @Column(nullable = false)
     private Long steps;
 
-    @Column(nullable = false, precision = 4, scale = 1)
-    private BigDecimal pace;
+    @Column(nullable = false)
+    private Double pace;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -49,7 +49,7 @@ public class Summary {
     @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDateTime createdAt;
 
-    public Summary(User user, Long totalCalories, BigDecimal totalDistance, String totalTime, Long steps, BigDecimal pace, ActivityType status){
+    public Summary(User user, double totalCalories, double totalDistance, String totalTime, Long steps, double pace, ActivityType status){
         this.user = user;
         this.totalCalories = totalCalories;
         this.totalDistance = totalDistance;

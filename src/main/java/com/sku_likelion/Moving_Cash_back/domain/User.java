@@ -33,6 +33,7 @@ public class User {
     @Column(nullable = false)
     private String name;
 
+    @Setter
     private Long point = 0L;
 
     @CreatedDate
