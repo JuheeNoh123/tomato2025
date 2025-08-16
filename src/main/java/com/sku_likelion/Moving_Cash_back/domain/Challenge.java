@@ -1,9 +1,8 @@
 package com.sku_likelion.Moving_Cash_back.domain;
 
-import com.sku_likelion.Moving_Cash_back.enums.CategoryType;
+import com.sku_likelion.Moving_Cash_back.enums.ActivityType;
+import com.sku_likelion.Moving_Cash_back.enums.LevelType;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.CreatedDate;
@@ -22,30 +21,27 @@ public class Challenge {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private CategoryType category;
+    private LevelType level;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ActivityType activity;
 
     @Column(nullable = false)
     private String title;
 
-    @Lob
     @Column(nullable = false)
-    private String content;
-
     private Long reward;
-
-    @Column(nullable = false)
-    private LocalDate deadline;
 
     @CreatedDate
     @Column(name = "created_at", updatable = false, nullable = false)
-    private LocalDateTime createdAt;
+    private LocalDate createdAt;
 
-    public Challenge(CategoryType category, String title, String content, Long reward, LocalDate deadline){
-        this.category = category;
+    public Challenge(LevelType level, ActivityType activity, String title, Long reward){
+        this.level = level;
+        this.activity = activity;
         this.title = title;
-        this.content = content;
         this.reward = reward;
-        this.deadline = deadline;
     }
 
 }
