@@ -20,18 +20,28 @@ public class MovingReqDTO {
         private Long sessionId;
         private BigDecimal lat; //위도
         private BigDecimal lng; //경도
+        private double distance;
         private LocalDateTime timestamp;
         private Long pointIndex;
         private Long step;
 
-        public RoutePointDTO(BigDecimal lat, BigDecimal lng, LocalDateTime timestamp, Long pointIndex, Long step) {
+        public RoutePointDTO(BigDecimal lat, BigDecimal lng, double distance,LocalDateTime timestamp, Long pointIndex, Long step) {
             this.lat = lat;
             this.lng = lng;
+            this.distance = distance;
             this.timestamp = timestamp;
             this.pointIndex = pointIndex;
             this.step = step;
         }
     }
 
+    @Data
+    public static class SessionEndDTO{
+        private double totalCalories;
+        private double totalDistance;
+        private double pace;
+        private String duration;
+        private Long points;
+    }
 
 }

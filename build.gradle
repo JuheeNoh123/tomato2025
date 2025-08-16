@@ -45,7 +45,7 @@ dependencies {
 
 
 	implementation(group: "io.netty", name: "netty-resolver-dns-native-macos", classifier: "osx-aarch_64")
-  
+
 	//websocket
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
 

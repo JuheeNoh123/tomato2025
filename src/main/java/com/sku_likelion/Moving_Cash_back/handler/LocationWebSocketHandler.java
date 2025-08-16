@@ -62,10 +62,11 @@ public class LocationWebSocketHandler extends TextWebSocketHandler {
         MovingReqDTO.RoutePointDTO dto = objectMapper.readValue(message.getPayload(), MovingReqDTO.RoutePointDTO.class);
         dto.setSessionId(session.getId());
 
-        movingService.saveRoutePoint(dto);
+
 
         MovingResDTO.RunningStats stats = calculateService.updateStats(dto, session);
-
+        dto.setDistance(stats.getTotalDistance());
+        movingService.saveRoutePoint(dto);
         // 서버에서 클라이언트에게 응답
         socketSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(stats)));
     }
