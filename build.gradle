@@ -32,8 +32,8 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	//implementation 'mysql:mysql-connector-java:8.0.33'
-
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
 
 	// jjwt
 	implementation 'io.jsonwebtoken:jjwt-jackson:0.12.6'
@@ -42,6 +42,9 @@ dependencies {
 
 	// swagger
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.5'
+
+
+	implementation(group: "io.netty", name: "netty-resolver-dns-native-macos", classifier: "osx-aarch_64")
 
 	//websocket
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
