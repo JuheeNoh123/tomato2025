@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -38,7 +39,11 @@ public class MainPageService {
             resActivityDate.add(summary.getCreatedAt().toLocalDate());
         }
         mainPageRes.setActivateList(resActivityDate);
-        Summary summary = summaryRepository.findTopByUserAndCreatedAtBetweenOrderByCreatedAtDesc(user, req.getTodayDate(), req.getTodayDate()).orElse(null);
+
+        LocalDate today = req.getTodayDate().toLocalDate();
+        LocalDateTime startOfDay = today.atStartOfDay();                  // 2025-08-16T00:00:00
+        LocalDateTime endOfDay = today.atTime(LocalTime.MAX);             // 2025-08-16T23:59:59.999999999
+        Summary summary = summaryRepository.findTopByUserAndStatusAndCreatedAtBetweenOrderByCreatedAtDesc(user,req.getStatus(), startOfDay, endOfDay).orElse(null);
         if (summary != null) {
             mainPageRes.setTotalCalories(summary.getTotalCalories());
             mainPageRes.setTotalDistance(summary.getTotalDistance());
