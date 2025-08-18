@@ -21,6 +21,6 @@ public class MainPageDTO {
         private ActivityType status;
         private LocalDateTime startDate;
         private LocalDateTime endDate;
-        private LocalDate todayDate;
+        private LocalDateTime todayDate;
     }
 }

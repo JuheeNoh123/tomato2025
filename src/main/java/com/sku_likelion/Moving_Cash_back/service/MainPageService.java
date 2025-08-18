@@ -38,7 +38,7 @@ public class MainPageService {
             resActivityDate.add(summary.getCreatedAt().toLocalDate());
         }
         mainPageRes.setActivateList(resActivityDate);
-        Summary summary = summaryRepository.findTopByUserOrderByCreatedAtDesc(user).orElse(null);
+        Summary summary = summaryRepository.findTopByUserAndCreatedAtBetweenOrderByCreatedAtDesc(user, req.getTodayDate(), req.getTodayDate()).orElse(null);
         if (summary != null) {
             mainPageRes.setTotalCalories(summary.getTotalCalories());
             mainPageRes.setTotalDistance(summary.getTotalDistance());
