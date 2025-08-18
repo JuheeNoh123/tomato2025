@@ -1,5 +1,6 @@
 package com.sku_likelion.Moving_Cash_back.controller;
 
+import com.sku_likelion.Moving_Cash_back.domain.Summary;
 import com.sku_likelion.Moving_Cash_back.domain.User;
 import com.sku_likelion.Moving_Cash_back.dto.request.MovingReqDTO;
 import com.sku_likelion.Moving_Cash_back.dto.response.MovingResDTO;
@@ -9,6 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 @RestController
@@ -32,5 +35,11 @@ public class MovingController {
     public ResponseEntity<MovingResDTO.SessionEndDTO> end(@AuthenticationPrincipal User user, @RequestBody MovingReqDTO.SessionEndDTO dto) {
         MovingResDTO.SessionEndDTO sessionEndDTO = movingService.end(user,dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(sessionEndDTO);
+    }
+
+    @GetMapping("/get/history")
+    public ResponseEntity<List<MovingResDTO.SummaryDTO>> getHistory(@AuthenticationPrincipal User user, @RequestBody MovingReqDTO.dateDTO dto) {
+        List<MovingResDTO.SummaryDTO> summaryList = movingService.getSummary(user, dto.getToday());
+        return ResponseEntity.ok(summaryList);
     }
 }

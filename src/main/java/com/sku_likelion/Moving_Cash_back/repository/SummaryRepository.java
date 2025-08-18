@@ -15,4 +15,5 @@ import java.util.Optional;
 public interface SummaryRepository extends JpaRepository<Summary, Long> {
     List<Summary> findByUserAndCreatedAtBetween(User user, LocalDateTime startDate, LocalDateTime endDate);
     Optional<Summary> findTopByUserAndStatusAndCreatedAtBetweenOrderByCreatedAtDesc(User user, ActivityType status, LocalDateTime startDate, LocalDateTime endDate);
+    List<Summary> findByUserAndCreatedAtBetweenOrderByCreatedAtDesc(User user, LocalDateTime startDate, LocalDateTime endDate);
 }

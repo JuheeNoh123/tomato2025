@@ -5,9 +5,11 @@ import com.sku_likelion.Moving_Cash_back.domain.Session;
 import com.sku_likelion.Moving_Cash_back.enums.ActivityType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
@@ -53,6 +55,11 @@ public class MovingReqDTO {
         private double pace;
         private String duration;
         private Long points;
+    }
+
+    @Data
+    public static class dateDTO{
+        private LocalDate today;
     }
 
 }
