@@ -36,7 +36,7 @@ public class MovingService {
         dto.setPoint(user.getPoint());
         Session session = sessionRepository.findByUser(user);
         if (session == null) {
-            dto.setStep(null);
+            dto.setStep(0L);
         }else{
             routePointRepository.findTopBySessionOrderByPointIndexDesc(session).ifPresent(recentPoint -> dto.setStep(recentPoint.getStep()));
         }
