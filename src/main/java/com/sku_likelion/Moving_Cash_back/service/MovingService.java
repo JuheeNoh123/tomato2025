@@ -16,8 +16,11 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -36,7 +39,7 @@ public class MovingService {
         dto.setPoint(user.getPoint());
         Session session = sessionRepository.findByUser(user);
         if (session == null) {
-            dto.setStep(null);
+            dto.setStep(0L);
         }else{
             routePointRepository.findTopBySessionOrderByPointIndexDesc(session).ifPresent(recentPoint -> dto.setStep(recentPoint.getStep()));
         }
@@ -85,5 +88,26 @@ public class MovingService {
         summaryRepository.save(summary);
 
         return new MovingResDTO.SessionEndDTO(summary.getTotalCalories(),summary.getTotalDistance(),summary.getSteps(), summary.getPace(), summary.getTotalTime(), user.getPoint());
+    }
+
+    //history 조회
+    public List<MovingResDTO.SummaryDTO> getSummary(User user, LocalDate today){
+        LocalDateTime startOfDay = today.atStartOfDay();                  // 2025-08-16T00:00:00
+        LocalDateTime endOfDay = today.atTime(LocalTime.MAX);
+        List<Summary> summaryList = summaryRepository.findByUserAndCreatedAtBetweenOrderByCreatedAtDesc(user, startOfDay, endOfDay);
+        List<MovingResDTO.SummaryDTO> summaryDTOList = new ArrayList<>();
+        MovingResDTO.SummaryDTO summaryDTO = new MovingResDTO.SummaryDTO();
+        for(Summary summary : summaryList){
+            summaryDTO.setDuration(summary.getTotalTime());
+            summaryDTO.setPace(summary.getPace());
+            summaryDTO.setTotalCalories(summary.getTotalCalories());
+            summaryDTO.setTotalDistance(summary.getTotalDistance());
+            summaryDTO.setStatus(summary.getStatus());
+            summaryDTO.setCreatedAt(summary.getCreatedAt());
+            summaryDTOList.add(summaryDTO);
+        }
+
+
+        return summaryDTOList;
     }
 }
