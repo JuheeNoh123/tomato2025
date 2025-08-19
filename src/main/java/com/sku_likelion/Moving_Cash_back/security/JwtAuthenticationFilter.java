@@ -69,6 +69,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }catch (JwtException e){
             writeUnauthorized(response, 401, "TOKEN_INVALID", "유효하지 않은 JWT입니다.");
         }catch (Exception e){
+            e.printStackTrace();
             writeUnauthorized(response, 401, "AUTH_ERROR", "인증 처리 중 오류가 발생했습니다.");
         }
     }
