@@ -49,4 +49,14 @@ public class MovingResDTO {
         private String duration;
         private Long points;
     }
+
+    @Data
+    public static class SummaryDTO {
+        private double totalCalories;
+        private double totalDistance;
+        private double pace;
+        private String duration;
+        private ActivityType status;
+        private LocalDateTime createdAt;
+    }
 }
