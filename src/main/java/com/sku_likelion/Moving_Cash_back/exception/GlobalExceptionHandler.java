@@ -55,4 +55,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(e.getMessage());
     }
 
+    @ExceptionHandler(PermanentOpenAIException.class)
+    public ResponseEntity<String> handlePermanent(PermanentOpenAIException e) {
+        return ResponseEntity
+                .badRequest()
+                .body("잘못된 요청입니다: " + e.getMessage());
+    }
+
+    @ExceptionHandler(TransientOpenAIException.class)
+    public ResponseEntity<String> handleTransient(TransientOpenAIException e) {
+        // 사실 retry가 다 실패한 상태에서만 여기 옴
+        return ResponseEntity
+                .status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body("OpenAI 서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요.");
+    }
+
 }

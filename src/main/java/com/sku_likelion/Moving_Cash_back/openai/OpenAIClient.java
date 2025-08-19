@@ -3,6 +3,8 @@ package com.sku_likelion.Moving_Cash_back.openai;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sku_likelion.Moving_Cash_back.config.external.openai.OpenAIProperties;
+import com.sku_likelion.Moving_Cash_back.exception.PermanentOpenAIException;
+import com.sku_likelion.Moving_Cash_back.exception.TransientOpenAIException;
 import com.sku_likelion.Moving_Cash_back.kakao.dto.PlaceRequest;
 import com.sku_likelion.Moving_Cash_back.kakao.dto.PlaceResponse;
 import com.sku_likelion.Moving_Cash_back.openai.dto.*;
@@ -11,6 +13,7 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import reactor.util.retry.Retry;
 
 import java.time.Duration;
 import java.util.ArrayList;
@@ -30,7 +33,7 @@ public class OpenAIClient {
         if(places == null || places.isEmpty()) throw new IllegalArgumentException("후보지가 없습니다.");
 
         // 장소 후보 과다 방지 토큰 비용 down
-        List<PlaceResponse> trimmed = places.stream().limit(100).toList();
+        List<PlaceResponse> trimmed = places.stream().limit(50).toList();
 
         // OpenAI로 보낼 최소 정보만 추출
         List<Candidate> cands = trimmed.stream()
@@ -91,16 +94,56 @@ public class OpenAIClient {
                 0.2
         );
 
+//        String resp = openAIWebClient.post()
+//                .uri("/responses")
+//                .bodyValue(req)
+//                .retrieve()
+//                .onStatus(HttpStatusCode::isError, r ->
+//                        r.bodyToMono(String.class)
+//                                .flatMap(b-> Mono.error(new RuntimeException("OpenAI 4xx/5xx: "+b))))
+//                .bodyToMono(String.class)
+//                .timeout(Duration.ofSeconds(props.getTimeoutSeconds()))
+//                .block();
+
         String resp = openAIWebClient.post()
                 .uri("/responses")
                 .bodyValue(req)
                 .retrieve()
-                .onStatus(HttpStatusCode::isError, r ->
+                // 5xx → 재시도 대상
+                .onStatus(HttpStatusCode::is5xxServerError, r ->
+                        r.toEntity(String.class).flatMap(e -> {
+                            var rid = e.getHeaders().getFirst("x-request-id"); // 요청 ID 로깅
+                            var body = e.getBody();
+                            return Mono.error(new TransientOpenAIException(
+                                    "5xx from OpenAI, reqId=" + rid + ", body=" + body
+                            ));
+                        })
+                )
+                // 4xx → 즉시 실패
+                .onStatus(HttpStatusCode::is4xxClientError, r ->
                         r.bodyToMono(String.class)
-                                .flatMap(b-> Mono.error(new RuntimeException("OpenAI 4xx/5xx: "+b))))
+                                .flatMap(b -> Mono.error(new PermanentOpenAIException("OpenAI 4xx: " + b)))
+                )
                 .bodyToMono(String.class)
+                // 네트워크/서버 오류 재시도 (최대 3회, 지수 백오프)
+                .retryWhen(
+                        //최대 3번까지 재시도, 첫번째 재시도는 1초 후에 (기본 지연시간 1초), 지수적 백오프 : 1초 -> 2초 -> 4초
+                        Retry.backoff(3, Duration.ofSeconds(1))
+                                //백오프 시간이 아무리 늘어나도 최대 8초까지만 기다림
+                                .maxBackoff(Duration.ofSeconds(8))
+                                //랜덤성 : 4초를 기다려야 하는 경우 실제로는 3.2초~4.8초 사이에서 랜덤하게 기다림
+                                .jitter(0.2)
+                                //어떤 오류에서 재시도할지 조건 지정
+                                .filter(ex ->
+                                        ex instanceof TransientOpenAIException ||
+                                                ex instanceof java.util.concurrent.TimeoutException ||
+                                                ex instanceof java.io.IOException
+                                )
+                )
+                // 연산자 타임아웃(응답 대기) — Netty responseTimeout과 맞추기
                 .timeout(Duration.ofSeconds(props.getTimeoutSeconds()))
                 .block();
+
 
         if (resp == null || resp.isBlank()) {
             throw new IllegalStateException("OpenAI 응답 비어있음(HTTP body null/blank)");
