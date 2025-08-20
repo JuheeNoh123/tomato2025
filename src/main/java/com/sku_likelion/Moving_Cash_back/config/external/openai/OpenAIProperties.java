@@ -1,4 +1,4 @@
-package com.sku_likelion.Moving_Cash_back.config;
+package com.sku_likelion.Moving_Cash_back.config.external.openai;
 
 import lombok.Getter;
 import lombok.Setter;

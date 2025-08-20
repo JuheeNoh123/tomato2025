@@ -25,7 +25,7 @@ public class JoinChallengeService {
     @Transactional
     public void createJoinChallenge(User curretUser, JoinChallengeDTO.JoinChallengeReq req){
         User user = userRepository.findByUserId(curretUser.getUserId())
-                .orElseThrow(()->new InvalidUserException("사용자를 찾을 수 없스니다."));
+                .orElseThrow(()->new InvalidUserException("사용자를 찾을 수 없습니다."));
 
         Challenge challenge = challengeRepository.findById(req.getChallengeId())
                 .orElseThrow(()-> new InvalidChallengeException("해당 챌린지가 없습니다."));

@@ -18,7 +18,7 @@ public class JoinChallengeController {
 
     private final JoinChallengeService joinChallengeService;
 
-    @PostMapping("/")
+    @PostMapping("/add")
     public ResponseEntity<Void> createJoinChallenge(@AuthenticationPrincipal User user, @RequestBody JoinChallengeDTO.JoinChallengeReq req){
         joinChallengeService.createJoinChallenge(user, req);
         return ResponseEntity.ok().build();
