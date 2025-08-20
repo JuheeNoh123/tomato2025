@@ -16,7 +16,11 @@ import org.springframework.transaction.annotation.Transactional;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,23 +31,34 @@ public class MovingSpotService {
     private final StringRedisTemplate redis;
     private final ObjectMapper om;
 
-    private static final Duration CACHE_TTL = Duration.ofHours(2);
+    private static final Duration CACHE_TTL = Duration.ofHours(1);
 
+    //유저 별 버전 키 (버전을 올려 장소/경로 캐시를 무효화할 때 사용)
     private static final String USER_REC_VER_KEY = "recs:u:%d:ver";
 
+    //추천 장소 캐시 키 (특정 사용자 + 버전에 대한 추천 장소 리스트 저장)
+    private static final String PLACES_KEY_FMT = "recs:places:u:%d:v:%d";
+
+    //추천 경로 캐시 키 (특정 사용자 + 버전 + 선호에 따른 산책 경로 저장)
+    private static final String ROUTES_KEY_FMT = "recs:routes:u:%d:v:%d";
+
+    // 현재 저장된 pref 해시 - 동일 버전에서 같은 테마/난이도/조건이면 캐시 재사용
+    private static final String ROUTES_PREF_HASH_FMT = "recs:routes:u:%d:v:%d:prefhash";
+
+    // 추천 장소 조회
     public List<RecommendRes> getRecommendedPlaces(User user, MovingSpotDTO.RecommendReq req){
 
         long ver = getUserRecVersion(user.getId());
 
         // 캐시 키 계산 (요청 지문 + 최신 ver)
-        String cacheKey = buildKey(
+        String placeKey = buildPlaceKey(
                 user.getId(),
                 ver
         );
 
         // 2) 캐시 조회
         try {
-            String cached = redis.opsForValue().get(cacheKey);
+            String cached = redis.opsForValue().get(placeKey);
             if (cached != null && !cached.isBlank()) {
                 // 캐시 히트 → 바로 반환
                 return om.readValue(cached, new TypeReference<List<RecommendRes>>() {});
@@ -73,25 +88,116 @@ public class MovingSpotService {
                         r.getName(),
                         req.getQuery(),
                         r.getAddress(),
-                        r.getLat(),
-                        r.getLng(),
+                        BigDecimal.valueOf(r.getLat()),
+                        BigDecimal.valueOf(r.getLng()),
                         r.getScore()
                 )).toList();
 
         try{
             String json = om.writeValueAsString(result);
-            redis.opsForValue().set(cacheKey, json, CACHE_TTL);
+            redis.opsForValue().set(placeKey, json, CACHE_TTL);
         }catch (Exception ignore){}
 
 
         return result;
     }
 
-    private String buildKey(Long userId,  long ver) {
-        return "recs:u:%d:v:%d"
-                .formatted(userId, ver);
+    // 추천 경로 생성
+    public List<WalkCourseRes>  recommendCourse(User user, MovingSpotDTO.WalkPref pref){
+
+        long ver = getUserRecVersion(user.getId());
+        String placeKey = buildPlaceKey(user.getId(), ver);
+        String routeKey = buildRouteKey(user.getId(), ver);
+
+        final String prefHashKey = ROUTES_PREF_HASH_FMT.formatted(user.getId(), ver);
+
+        final String currentHash = buildPrefHash(pref);
+
+        // pref 캐시 확인후 동일하면 경로 캐시 사용
+        try {
+            String savedHash = redis.opsForValue().get(prefHashKey);
+            if (currentHash.equals(savedHash)) {
+                String cachedRoute = redis.opsForValue().get(routeKey);
+                if (cachedRoute != null && !cachedRoute.isBlank()) {
+                    return om.readValue(cachedRoute, new TypeReference<List<WalkCourseRes>>() {});
+                }
+            }
+        } catch (Exception ignore) {}
+
+        // 장소 캐시 조회
+        List<RecommendRes> candidates;
+        try{
+            String cached = redis.opsForValue().get(placeKey);
+            if(cached == null || cached.isBlank()){
+                throw new IllegalStateException("추천 장소가 없습니다. 장소 추천을 받아주세요.");
+            }
+            candidates = om.readValue(cached, new TypeReference<List<RecommendRes>>() {});
+        }catch (Exception e){
+            throw  new IllegalStateException("추천 장소 캐시 파싱 실패", e);
+        }
+
+        final int radius = 800; // 300~800m 추천
+        List<RecommendRes> enriched = new ArrayList<>(candidates);
+
+        for (RecommendRes base : candidates) {
+
+            List<RecommendRes> nearby = kakaoClient.findNearbyPOIs(base, radius);
+
+            // 너무 많아지지 않도록 후보별 상한(예: 3개) + 전체 상한(예: 50개)
+            if (nearby != null && !nearby.isEmpty()) {
+                enriched.addAll(nearby.stream().limit(3).toList());
+                if (enriched.size() > 50) break;
+            }
+        }
+
+        // 이름+좌표 기준 중복 제거
+        enriched = enriched.stream()
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(
+                                r -> r.getName() + "|" + r.getLat() + "|" + r.getLng(),
+                                r -> r,
+                                (a,b) -> a
+                        ),
+                        m -> new ArrayList<>(m.values())
+                ));
+
+        //경로 생성
+        List<WalkCourseRes> result = openAIClient.generateWalkCourses(enriched, pref);
+
+        // 경로 캐시 저장
+        try{
+            redis.opsForValue().set(routeKey, om.writeValueAsString(result), CACHE_TTL);
+            redis.opsForValue().set(prefHashKey, currentHash, CACHE_TTL);
+        }catch (Exception ignore){}
+
+        return result;
     }
 
+    // 경로 캐시 키
+    private String buildRouteKey(Long userId, long ver) {
+        return ROUTES_KEY_FMT.formatted(userId, ver);
+    }
+
+    // 장소 캐시 키
+    private String buildPlaceKey(Long userId,  long ver) {
+        return PLACES_KEY_FMT.formatted(userId, ver);
+    }
+
+    // Pref 해시 생성
+    private String buildPrefHash(MovingSpotDTO.WalkPref pref) {
+        Map<String, Object> hashInput = new LinkedHashMap<>();
+        hashInput.put("theme", pref.getTheme());
+        hashInput.put("difficulty", pref.getDifficulty());
+        hashInput.put("condition", pref.getCondition());
+        try {
+            String json = om.writeValueAsString(hashInput);
+            return Integer.toHexString(json.hashCode());
+        } catch (Exception e) {
+            return Integer.toHexString(hashInput.hashCode());
+        }
+    }
+
+    // 유저의 현재 버전 조회
     private long getUserRecVersion(Long userId) {
         String vk = USER_REC_VER_KEY.formatted(userId);
         String v = redis.opsForValue().get(vk);
@@ -102,9 +208,13 @@ public class MovingSpotService {
         return Long.parseLong(v);
     }
 
+
+    @Transactional // 버전 증가
     public void bumpUserRecVersion(Long userId) {
         String vk = USER_REC_VER_KEY.formatted(userId);
         redis.opsForValue().increment(vk);
     }
 
+    //***이거 물어봐야함***
+    //이렇게 하면 같은 버전 내에서 서로 다른 테마/난이도 요청이 와도 마지막 요청 결과가 덮어쓰기 됩니다
 }

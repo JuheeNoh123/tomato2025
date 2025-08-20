@@ -3,11 +3,13 @@ package com.sku_likelion.Moving_Cash_back.openai;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sku_likelion.Moving_Cash_back.config.external.openai.OpenAIProperties;
+import com.sku_likelion.Moving_Cash_back.dto.response.MovingSpotDTO;
 import com.sku_likelion.Moving_Cash_back.exception.PermanentOpenAIException;
 import com.sku_likelion.Moving_Cash_back.exception.TransientOpenAIException;
 import com.sku_likelion.Moving_Cash_back.kakao.dto.PlaceRequest;
 import com.sku_likelion.Moving_Cash_back.kakao.dto.PlaceResponse;
 import com.sku_likelion.Moving_Cash_back.openai.dto.*;
+import com.sku_likelion.Moving_Cash_back.dto.request.MovingSpotDTO.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.stereotype.Component;
@@ -15,6 +17,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import reactor.util.retry.Retry;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -231,6 +234,161 @@ public class OpenAIClient {
         return ranked;
     }
 
+    //추천 경로 만들기
+    public List<MovingSpotDTO.WalkCourseRes> generateWalkCourses(List<MovingSpotDTO.RecommendRes> candidates, WalkPref pref){
+        if (candidates == null || candidates.isEmpty()) {
+            throw new IllegalStateException("코스 후보가 없습니다(캐시 없음).");
+        }
+
+        String candsJson;
+        try{
+            candsJson = om.writeValueAsString(candidates);
+        }catch (Exception e){
+            throw new IllegalStateException("직렬화 실패",e);
+        }
+
+        String  system = """
+    당신은 산책 코스 플래너입니다. 사용자의 조건에 맞춰 주어진 후보 장소들을 이어 1~3개의 산책 코스를 설계하세요.
+    결과는 무조건 JSON만 반환하세요. 코드펜스/설명 금지.
+    스키마:
+    [
+      {
+        "routeId":1     //1씩 증가
+        "waypoints": [{"name":"...","lat":...,"lng":...}],
+        "destination": {"name":"...", "lat":..., "lng":...}
+        //주의 : start(출발지)는 생성하지 말 것. 서버에서 주입함.
+      }
+    ]
+    규칙:
+    - 좌표(lat,lng)는 입력 후보의 값을 그대로 사용.
+    - waypoints는 '추천장소' + '주변POI'(공원/산책로/볼거리) 풀에서 선택.
+    -- destination은 의미있는 종착지(예: 넓은 공원, 산책 마무리하기 좋은 명소)로 선택.
+    - waypoints는 0~5개.
+    - JSON 외 어떠한 텍스트/마크다운도 금지.
+    """;
+
+        String themes = joinOrNA(pref.getTheme());      // 예: "힐링, 반려동물, 야경" 또는 "없음"
+        String difficulties = joinOrNA(pref.getDifficulty()); // 예: "쉬움, 보통" 또는 "없음"
+        String conditions = joinOrNA(pref.getCondition());  // 예: "비 안 옴" 또는 "없음"
+
+        String user = """
+    사용자 조건:
+    - 테마: %s
+    - 난이도: %s
+    - 추가조건: %s
+
+    후보 풀(추천장소 + 주변POI):
+    %s
+
+    작업:
+    - 조건에 가장 잘 맞는 코스를 1~3개 생성.
+    - waypoints/destination 각각을 후보 중에서 선택
+    """.formatted(
+            nvl(themes), nvl(difficulties), nvl(conditions), candsJson
+        );
+
+        var req = new ResponseRequest(
+                props.getModel(),
+                system + "\n\n" + user,
+                null,
+                null,
+                0.2
+        );
+
+        String resp = openAIWebClient.post()
+                .uri("/responses")
+                .bodyValue(req)
+                .retrieve()
+                // 5xx → 재시도 대상
+                .onStatus(HttpStatusCode::is5xxServerError, r ->
+                        r.toEntity(String.class).flatMap(e -> {
+                            var rid = e.getHeaders().getFirst("x-request-id"); // 요청 ID 로깅
+                            var body = e.getBody();
+                            return Mono.error(new TransientOpenAIException(
+                                    "5xx from OpenAI, reqId=" + rid + ", body=" + body
+                            ));
+                        })
+                )
+                // 4xx → 즉시 실패
+                .onStatus(HttpStatusCode::is4xxClientError, r ->
+                        r.bodyToMono(String.class)
+                                .flatMap(b -> Mono.error(new PermanentOpenAIException("OpenAI 4xx: " + b)))
+                )
+                .bodyToMono(String.class)
+                .timeout(Duration.ofSeconds(props.getTimeoutSeconds()))
+                .block();
+
+        if (resp == null || resp.isBlank()){
+            throw new IllegalStateException("OpenAI 응답 비어있음");
+        }
+
+        String out;
+        try {
+            var root = om.readTree(resp);
+
+            var ot = root.path("output_text");
+            if (!ot.isMissingNode() && !ot.isNull() && !ot.asText().isBlank()) {
+                out = ot.asText();
+            } else {
+                out = null;
+                var output = root.path("output");
+                if (output.isArray()) {
+                    for (var item : output) {
+                        if ("message".equals(item.path("type").asText())) {
+                            var content = item.path("content");
+                            if (content.isArray() && content.size() > 0) {
+                                var first = content.get(0);
+                                // "output_text" 또는 "text" 타입 모두 케어
+                                var t = first.path("text").asText("");
+                                if (!t.isBlank()) { out = t; break; }
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new IllegalStateException("OpenAI 응답 JSON 파싱 실패(resp): " + resp, e);
+        }
+        if (out == null || out.isBlank()) {
+            throw new IllegalStateException("OpenAI 응답 비어있음(파싱 실패). resp=" + resp);
+        }
+
+        String cleaned = sanitizeJsonArray(out);
+
+        try {
+            List<MovingSpotDTO.WalkCourseRes> courses = om.readValue(cleaned, new TypeReference<List<MovingSpotDTO.WalkCourseRes>>() {});
+
+            BigDecimal curLat = pref.getLat();
+            BigDecimal curLng = pref.getLng();
+
+            for (MovingSpotDTO.WalkCourseRes c : courses) {
+                MovingSpotDTO.Node start = new MovingSpotDTO.Node();
+                start.setName("출발지");
+                start.setLat(curLat);
+                start.setLng(curLng);
+                c.setStart(start);
+            }
+
+            return courses;
+
+        } catch (Exception e) {
+            throw new IllegalStateException("코스 JSON 파싱 실패: " + cleaned, e);
+        }
+
+    }
+
+    // 문자열 조인
+    private static String joinOrNA(List<String> list) {
+        if (list == null || list.isEmpty()) return "없음";
+        return list.stream()
+                .map(s -> s == null ? "" : s.trim())
+                .filter(s -> !s.isEmpty())
+                .collect(java.util.stream.Collectors.joining(", "));
+    }
+
+    private static String nvl(String s){ return (s==null || s.isBlank()) ? "미지정" : s; }
+
+
     /**
      * 모델이 코드펜스(``` 또는 ```json)로 감싸거나 앞뒤에 설명을 붙여도
      * JSON 배열만 깔끔히 추출해주는 정리 함수.
@@ -268,4 +426,6 @@ public class OpenAIClient {
 
         return t;
     }
+
+
 }

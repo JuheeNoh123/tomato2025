@@ -1,5 +1,6 @@
 package com.sku_likelion.Moving_Cash_back.kakao;
 
+import com.sku_likelion.Moving_Cash_back.dto.response.MovingSpotDTO;
 import com.sku_likelion.Moving_Cash_back.kakao.dto.KakaoApiResponse;
 import com.sku_likelion.Moving_Cash_back.kakao.dto.PlaceResponse;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -67,5 +69,47 @@ public class KakaoClient {
                 .values()
                 .stream()
                 .toList();
+    }
+
+    public List<MovingSpotDTO.RecommendRes> findNearbyPOIs(MovingSpotDTO.RecommendRes base, int radius) {
+        // 키워드 조합 예: "공원", "산책로", "둘레길", "놀거리", "관광명소"
+        String[] keywords = {"공원", "산책로", "둘레길", "소품샵", "관광명소"};
+        List<MovingSpotDTO.RecommendRes> out = new ArrayList<>();
+
+        for (String kw : keywords) {
+            // Kakao Local: keyword search around base lat/lng
+            List<PlaceResponse> rs = searchPlaces(
+                    kw,
+                    base.getLat(), base.getLng(),
+                    radius,
+                    1 // 페이지 1 (필요시 2~3페이지만 더)
+            );
+            if (rs == null) continue;
+
+            for (PlaceResponse p : rs) {
+                // base와 너무 가까운/이름 같은 것 등 간단히 중복/잡음 제거
+                if (p.getName() == null) continue;
+                out.add(new MovingSpotDTO.RecommendRes(
+                        base.getUserId(),
+                        p.getName(),
+                        kw,                       // query에 근거 키워드 남겨두면 추적 쉬움
+                        p.getAddress(),
+                        BigDecimal.valueOf(p.getLat()),
+                        BigDecimal.valueOf(p.getLng()),
+                        null // score 없음
+                ));
+            }
+        }
+
+        // 이름/좌표로 중복 제거
+        return out.stream()
+                .collect(Collectors.collectingAndThen(
+                        Collectors.toMap(
+                                r -> (r.getName() + "|" + r.getLat() + "|" + r.getLng()),
+                                r -> r,
+                                (a, b) -> a
+                        ),
+                        m -> new ArrayList<>(m.values())
+                ));
     }
 }
