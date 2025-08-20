@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public class MovingSpotDTO {
 
@@ -25,4 +26,16 @@ public class MovingSpotDTO {
         @NotNull
         private Integer page;
     }
+
+    @Data
+    public static class WalkPref{
+        @NotNull
+        private BigDecimal lat;
+        @NotNull
+        private BigDecimal lng;
+        private List<String> theme;
+        private List<String> difficulty;
+        private List<String> condition;
+    }
+
 }
