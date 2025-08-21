@@ -19,6 +19,7 @@ public class CorsConfig {
         cfg.setAllowedOrigins(List.of(
                 "http://localhost:3000",
                 "http://localhost:5173",
+                "http://localhost:8081",
                 "*"
         ));
         cfg.setAllowedMethods(List.of("GET","POST","PUT","PATCH","DELETE","OPTIONS")); //허용할 메서드 지정
