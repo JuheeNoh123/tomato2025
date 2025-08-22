@@ -22,16 +22,16 @@ public class ChallengeController {
 
     private final ChallengeService challengeService;
 
-//    @PostMapping("/generate")
-//    public ResponseEntity<List<Challenge>> generateChallenge(){
-//        List<Challenge> challenges =new ArrayList<>();
-//        for (ActivityType activity : List.of(ActivityType.WALKING, ActivityType.RUNNING)) {
-//            for (LevelType level : LevelType.values()) {
-//                challenges= challengeService.generateAndSave(activity, level, 5);
-//            }
-//        }
-//        return ResponseEntity.ok(challenges);
-//    }
+    @PostMapping("/generate")
+    public ResponseEntity<List<Challenge>> generateChallenge(){
+        List<Challenge> challenges =new ArrayList<>();
+        for (ActivityType activity : List.of(ActivityType.WALKING, ActivityType.RUNNING)) {
+            for (LevelType level : LevelType.values()) {
+                challenges= challengeService.generateAndSave(activity, level, 5);
+            }
+        }
+        return ResponseEntity.ok(challenges);
+    }
 
     @GetMapping("/all/{date}")
     public ResponseEntity<List<ChallengeDTO.ChallengeRes>> getAllChallenge(@AuthenticationPrincipal User user, @PathVariable LocalDate date){

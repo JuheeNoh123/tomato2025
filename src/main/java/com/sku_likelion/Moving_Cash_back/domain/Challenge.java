@@ -10,6 +10,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @EntityListeners(AuditingEntityListener.class)
 @NoArgsConstructor
@@ -33,7 +34,7 @@ public class Challenge {
     @Column(nullable = false)
     private Long reward;
 
-    @CreatedDate
+
     @Column(name = "created_at", updatable = false, nullable = false)
     private LocalDate createdAt;
 
@@ -42,6 +43,7 @@ public class Challenge {
         this.activity = activity;
         this.title = title;
         this.reward = reward;
+        this.createdAt = LocalDate.now(ZoneId.of("Asia/Seoul"));
     }
 
 }
