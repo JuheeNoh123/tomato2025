@@ -43,17 +43,14 @@ public class MainPageService {
         LocalDate today = req.getTodayDate().toLocalDate();
         LocalDateTime startOfDay = today.atStartOfDay();                  // 2025-08-16T00:00:00
         LocalDateTime endOfDay = today.atTime(LocalTime.MAX);             // 2025-08-16T23:59:59.999999999
-        Summary summary = summaryRepository.findTopByUserAndStatusAndCreatedAtBetweenOrderByCreatedAtDesc(user,req.getStatus(), startOfDay, endOfDay).orElse(null);
-        if (summary != null) {
-            mainPageRes.setTotalCalories(summary.getTotalCalories());
-            mainPageRes.setTotalDistance(summary.getTotalDistance());
-            mainPageRes.setSteps(summary.getSteps());
-        }
-        else{
-            mainPageRes.setTotalCalories(0);
-            mainPageRes.setTotalDistance(0);
-            mainPageRes.setSteps(0);
-        }
+        Object[] result = (Object[]) summaryRepository.findTodaySum(user, req.getStatus(), startOfDay, endOfDay);
+        double totalCalories = ((Number) result[0]).doubleValue();
+        double totalDistance = ((Number) result[1]).doubleValue();
+        long steps = ((Number) result[2]).longValue();
+        mainPageRes.setTotalCalories(totalCalories);
+        mainPageRes.setTotalDistance(totalDistance);
+        mainPageRes.setSteps(steps);
+
         List<MainPageDTO.position> positionList = new ArrayList<>();
         Session session = sessionRepository.findByUser(user);
         List<RoutePoint> routePointList = routePointRepository.findBySession(session);
