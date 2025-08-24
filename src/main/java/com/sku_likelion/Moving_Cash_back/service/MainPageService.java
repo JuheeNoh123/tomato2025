@@ -9,9 +9,11 @@ import com.sku_likelion.Moving_Cash_back.dto.request.MainPageDTO.mainPageReq;
 import com.sku_likelion.Moving_Cash_back.repository.RoutePointRepository;
 import com.sku_likelion.Moving_Cash_back.repository.SessionRepository;
 import com.sku_likelion.Moving_Cash_back.repository.SummaryRepository;
+import com.sku_likelion.Moving_Cash_back.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -26,6 +28,8 @@ public class MainPageService {
     private final SummaryRepository summaryRepository;
     private final RoutePointRepository routePointRepository;
     private final SessionRepository sessionRepository;
+    private final UserService userService;
+    private final UserRepository userRepository;
 
 
     public MainPageDTO.mainPageRes mainPage(User user, mainPageReq req) {
@@ -87,5 +91,12 @@ public class MainPageService {
         }
         mainPageRes.setPositionList(positionList);
         return mainPageRes;
+    }
+
+    @Transactional
+    public User addPoints(Long userId, Long amount) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("User Not Found"));
+        user.setPoint(user.getPoint() + amount);
+        return user;
     }
 }

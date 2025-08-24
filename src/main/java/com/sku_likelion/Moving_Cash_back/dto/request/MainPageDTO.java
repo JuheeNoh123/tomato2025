@@ -23,4 +23,10 @@ public class MainPageDTO {
         private LocalDateTime endDate;
         private LocalDateTime todayDate;
     }
+
+
+    @Data
+    public static class pointsAmount{
+        private Long points;
+    }
 }

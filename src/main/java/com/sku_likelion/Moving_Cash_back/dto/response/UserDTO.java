@@ -9,6 +9,7 @@ public class UserDTO {
     public static class ResponseUser{
         private String userId;
         private String name;
+        private Long points;
     }
 
     @Data
