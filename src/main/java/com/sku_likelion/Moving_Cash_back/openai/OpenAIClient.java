@@ -249,11 +249,10 @@ public class OpenAIClient {
 
         String  system = """
     당신은 산책 코스 플래너입니다. 사용자의 조건에 맞춰 주어진 후보 장소들을 이어 1개의 산책 코스를 설계하세요.
-    결과는 무조건 JSON만 반환하세요. 코드펜스/설명 금지.
+    결과는 무조건 JSON **단일 객체**만 반환. 코드펜스/설명/배열 금지.
     
     스키마:
-     {
-       "routeId":1     //1씩 증가
+     }
        "waypoints": [{"name":"...","lat":...,"lng":...}],
        "destination": {"name":"...", "lat":..., "lng":...}
      }
@@ -261,7 +260,7 @@ public class OpenAIClient {
      
     규칙:
     - 좌표(lat,lng)는 입력 후보의 값을 그대로 사용.
-    - waypoints는 '추천장소' + '주변POI(공원/산책로/볼거리)' 풀에서 선택.
+    - waypoints는 '추천장소' + '주변POI(공원/산책로/볼거리)' 풀에서 선택, 추천장소가 적어도 1개는 포함되어야함.
     - destination은 의미있는 종착지(예: 넓은 공원, 산책 마무리하기 좋은 명소)로 선택.
     - 불필요한 왕복/되돌아감 최소화.
     - waypoints는 1~5개.
@@ -357,21 +356,54 @@ public class OpenAIClient {
             throw new IllegalStateException("OpenAI 응답 비어있음(파싱 실패). resp=" + resp);
         }
 
-        String cleaned = sanitizeJsonArray(out);
+        String cleaned = out.trim();
+
+        if (cleaned.startsWith("```")) {
+            int i = cleaned.indexOf('{');
+            int j = cleaned.indexOf('[');
+            int start = (i >= 0 && j >= 0) ? Math.min(i, j) : Math.max(i, j);
+            int end = cleaned.lastIndexOf("```");
+            cleaned = (start >= 0) ? cleaned.substring(start, end > start ? end : cleaned.length()).trim()
+                    : cleaned.replace("```", "").trim();
+        }
 
         try {
-            MovingSpotDTO.WalkCourseRes courses = om.readValue(cleaned, new TypeReference<MovingSpotDTO.WalkCourseRes>() {});
+            MovingSpotDTO.WalkCourseRes course;
 
-            BigDecimal curLat = pref.getLat();
-            BigDecimal curLng = pref.getLng();
+            if (cleaned.startsWith("[")) {
+                // 모델이 "노드 배열"만 준 경우 → 마지막을 destination, 앞부분을 waypoints로 감싸기
+                List<MovingSpotDTO.Node> nodes =
+                        om.readValue(cleaned, new com.fasterxml.jackson.core.type.TypeReference<List<MovingSpotDTO.Node>>() {});
 
+                if (nodes == null || nodes.isEmpty()) {
+                    throw new IllegalStateException("빈 노드 배열");
+                }
+
+                course = new MovingSpotDTO.WalkCourseRes();
+                if (nodes.size() == 1) {
+                    course.setWaypoints(java.util.List.of());
+                    course.setDestination(nodes.get(0));
+                } else {
+                    course.setWaypoints(nodes.subList(0, nodes.size() - 1));
+                    course.setDestination(nodes.get(nodes.size() - 1));
+                }
+
+            } else if (cleaned.startsWith("{")) {
+                // 정상: 단일 객체
+                course = om.readValue(cleaned, MovingSpotDTO.WalkCourseRes.class);
+            } else {
+                throw new IllegalStateException("알 수 없는 JSON 형식: " +
+                        cleaned.substring(0, Math.min(120, cleaned.length())));
+            }
+
+            // 출발지 주입
             MovingSpotDTO.Node start = new MovingSpotDTO.Node();
             start.setName("출발지");
-            start.setLat(curLat);
-            start.setLng(curLng);
-            courses.setStart(start);
+            start.setLat(pref.getLat());
+            start.setLng(pref.getLng());
+            course.setStart(start);
 
-            return courses;
+            return course;
 
         } catch (Exception e) {
             throw new IllegalStateException("코스 JSON 파싱 실패: " + cleaned, e);
