@@ -15,14 +15,27 @@ import java.util.Optional;
 
 @Repository
 public interface SummaryRepository extends JpaRepository<Summary, Long> {
-    List<Summary> findByUserAndCreatedAtBetween(User user, LocalDateTime startDate, LocalDateTime endDate);
-    //Optional<Summary> findTopByUserAndStatusAndCreatedAtBetweenOrderByCreatedAtDesc(User user, ActivityType status, LocalDateTime startDate, LocalDateTime endDate);
-    @Query("SELECT COALESCE(SUM(s.totalCalories),0), COALESCE(SUM(s.totalDistance),0), COALESCE(SUM(s.steps),0) " +
-            "FROM Summary s " +
-            "WHERE s.user = :user AND s.status = :status AND s.createdAt BETWEEN :start AND :end")
-    Object findTodaySum(@Param("user") User user,
-                          @Param("status") ActivityType status,
-                          @Param("start") LocalDateTime start,
-                          @Param("end") LocalDateTime end);
+    @Query(value = "SELECT *  FROM summary " +
+            "WHERE user_id = :userId " +
+            "AND created_at >= :start " +
+            "AND created_at < :end", nativeQuery = true)
+    List<Summary> findByUserAndCreatedAtBetween(
+            @Param("userId") Long userId,
+            @Param("start") String start,
+            @Param("end") String end
+    );
+    //List<Summary> findByUserAndCreatedAtBetween(User user, LocalDateTime startDate, LocalDateTime endDate);
+
+    @Query(value = "SELECT COALESCE(SUM(total_calories),0) , coalesce(SUM(total_distance),0) , coalesce(SUM(steps),0)  FROM summary " +
+            "WHERE user_id = :userId " +
+            "AND status = :status " +
+            "AND created_at >= :start " +
+            "AND created_at < :end", nativeQuery = true)
+    Object findSummariesNative(
+            @Param("userId") Long userId,
+            @Param("status") String status,
+            @Param("start") String start,
+            @Param("end") String end
+    );
     List<Summary> findByUserAndCreatedAtBetweenOrderByCreatedAtDesc(User user, LocalDateTime startDate, LocalDateTime endDate);
 }
