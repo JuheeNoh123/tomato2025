@@ -15,10 +15,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -41,12 +39,27 @@ public class MainPageService {
         mainPageRes.setActivateList(resActivityDate);
 
         LocalDate today = req.getTodayDate().toLocalDate();
-        LocalDateTime startOfDay = today.atStartOfDay();                  // 2025-08-16T00:00:00
-        LocalDateTime endOfDay = today.atTime(LocalTime.MAX);             // 2025-08-16T23:59:59.999999999
-        Object[] result = (Object[]) summaryRepository.findTodaySum(user, req.getStatus(), startOfDay, endOfDay);
-        double totalCalories = ((Number) result[0]).doubleValue();
-        double totalDistance = ((Number) result[1]).doubleValue();
-        long steps = ((Number) result[2]).longValue();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.plusDays(1).atStartOfDay(); // 다음 날 00:00:00
+
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String startStr = startOfDay.format(formatter);
+        String endStr = endOfDay.format(formatter);
+
+        Object[] summaries = (Object[]) summaryRepository.findSummariesNative(
+                user.getId(),
+                req.getStatus().name(),
+                startStr,
+                endStr
+        );
+
+        double totalCalories = ((Number) summaries[0]).doubleValue();
+        double totalDistance = ((Number) summaries[1]).doubleValue();
+        long steps = ((Number) summaries[2]).longValue();
+        System.out.println(totalCalories);
+        System.out.println(totalDistance);
+        System.out.println(steps);
         mainPageRes.setTotalCalories(totalCalories);
         mainPageRes.setTotalDistance(totalDistance);
         mainPageRes.setSteps(steps);
