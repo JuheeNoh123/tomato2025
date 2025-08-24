@@ -33,7 +33,7 @@ public class MainPageDTO {
     @Data
     public static class mainPageRes{
         private String name;
-        private Set<LocalDate> activateList;
+        private List<String> activateList;
         private double totalCalories;
         private double totalDistance;
         private long steps;

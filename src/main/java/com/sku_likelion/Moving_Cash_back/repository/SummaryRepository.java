@@ -15,11 +15,11 @@ import java.util.Optional;
 
 @Repository
 public interface SummaryRepository extends JpaRepository<Summary, Long> {
-    @Query(value = "SELECT *  FROM summary " +
+    @Query(value = "SELECT DISTINCT DATE_FORMAT(created_at, '%Y-%m-%d') as date_str  FROM summary " +
             "WHERE user_id = :userId " +
             "AND created_at >= :start " +
             "AND created_at < :end", nativeQuery = true)
-    List<Summary> findByUserAndCreatedAtBetween(
+    List<String> findByUserAndCreatedAtBetween(
             @Param("userId") Long userId,
             @Param("start") String start,
             @Param("end") String end

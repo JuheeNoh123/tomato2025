@@ -33,16 +33,22 @@ public class MainPageService {
         mainPageRes.setName(user.getName());
         mainPageRes.setPoints(user.getPoint());
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        String startDay = req.getStartDate().format(formatter);
-        String endDay = req.getEndDate().format(formatter);
-        List<Summary> summaryList = summaryRepository.findByUserAndCreatedAtBetween(user.getId(), startDay, endDay);
+
+
+        //LocalDateTime endDateTime = req.getEndDate();
+        String startDate_str = req.getStartDate().format(formatter);
+        LocalDate endDate = req.getEndDate().toLocalDate();
+        LocalDateTime newEndDate = endDate.plusDays(1).atStartOfDay();
+        String newEndDate_str= newEndDate.format(formatter);
+        //String endDay = req.getEndDate().format(formatter);
+        List<String> summaryList = summaryRepository.findByUserAndCreatedAtBetween(user.getId(), startDate_str, newEndDate_str);
         System.out.println(summaryList);
-        Set<LocalDate> resActivityDate = new HashSet<>();
-        for (Summary summary : summaryList) {
-            System.out.println(summary.getCreatedAt());
-            resActivityDate.add(summary.getCreatedAt().toLocalDate());
-        }
-        mainPageRes.setActivateList(resActivityDate);
+        //Set<LocalDate> resActivityDate = new HashSet<>();
+//        for (Summary summary : summaryList) {
+//            System.out.println(summary.getCreatedAt());
+//            resActivityDate.add(summary.getCreatedAt().toLocalDate());
+//        }
+        mainPageRes.setActivateList(summaryList);
 
         LocalDate today = req.getTodayDate().toLocalDate();
         LocalDateTime startOfDay = today.atStartOfDay();
