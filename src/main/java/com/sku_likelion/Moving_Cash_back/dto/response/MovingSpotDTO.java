@@ -3,6 +3,7 @@ package com.sku_likelion.Moving_Cash_back.dto.response;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -23,8 +24,8 @@ public class MovingSpotDTO {
 
     @Data
     @AllArgsConstructor
+    @NoArgsConstructor
     public static class WalkCourseRes{
-        private Long routeId;
         private Node start;
         private List<Node> waypoints;
         private Node destination;
