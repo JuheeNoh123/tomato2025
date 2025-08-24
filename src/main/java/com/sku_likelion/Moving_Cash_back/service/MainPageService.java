@@ -36,8 +36,10 @@ public class MainPageService {
         String startDay = req.getStartDate().format(formatter);
         String endDay = req.getEndDate().format(formatter);
         List<Summary> summaryList = summaryRepository.findByUserAndCreatedAtBetween(user.getId(), startDay, endDay);
+        System.out.println(summaryList);
         Set<LocalDate> resActivityDate = new HashSet<>();
         for (Summary summary : summaryList) {
+            System.out.println(summary.getCreatedAt());
             resActivityDate.add(summary.getCreatedAt().toLocalDate());
         }
         mainPageRes.setActivateList(resActivityDate);
