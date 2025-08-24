@@ -16,10 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.lang.reflect.Type;
 import java.math.BigDecimal;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,13 +28,16 @@ public class MovingSpotService {
     private final StringRedisTemplate redis;
     private final ObjectMapper om;
 
-    private static final Duration CACHE_TTL = Duration.ofHours(1);
+    private static final Duration CACHE_TTL = Duration.ofHours(2);
 
     //유저 별 버전 키 (버전을 올려 장소/경로 캐시를 무효화할 때 사용)
     private static final String USER_REC_VER_KEY = "recs:u:%d:ver";
 
     //추천 장소 캐시 키 (특정 사용자 + 버전에 대한 추천 장소 리스트 저장)
-    private static final String PLACES_KEY_FMT = "recs:places:u:%d:v:%d";
+    private static final String PLACES_KEY_FMT = "recs:places:u:%d:v:%d:q:%s";
+
+    // 통합 카탈로그(해당 ver의 모든 장소)
+    private static final String PLACES_CATALOG_KEY_FMT = "recs:places:u:%d:v:%d:all";
 
     //추천 경로 캐시 키 (특정 사용자 + 버전 + 선호에 따른 산책 경로 저장)
     private static final String ROUTES_KEY_FMT = "recs:routes:u:%d:v:%d";
@@ -53,8 +53,11 @@ public class MovingSpotService {
         // 캐시 키 계산 (요청 지문 + 최신 ver)
         String placeKey = buildPlaceKey(
                 user.getId(),
-                ver
+                ver,
+                req.getQuery()
         );
+
+
 
         // 2) 캐시 조회
         try {
@@ -95,7 +98,21 @@ public class MovingSpotService {
 
         try{
             String json = om.writeValueAsString(result);
+            //개별 쿼리 결과 저장
             redis.opsForValue().set(placeKey, json, CACHE_TTL);
+
+            //버전별 전체 장소 카탈로그 키 갱신
+            String catalogKey = PLACES_CATALOG_KEY_FMT.formatted(user.getId(), ver);
+
+            List<RecommendRes> merged = new ArrayList<>();
+
+            String prev = redis.opsForValue().get(catalogKey);
+            if(prev != null && !prev.isBlank()){
+                merged.addAll(om.readValue(prev, new TypeReference<Collection<? extends RecommendRes>>() {}));
+            }
+            merged.addAll(result);
+
+            redis.opsForValue().set(catalogKey, om.writeValueAsString(merged), CACHE_TTL);
         }catch (Exception ignore){}
 
 
@@ -103,10 +120,10 @@ public class MovingSpotService {
     }
 
     // 추천 경로 생성
-    public List<WalkCourseRes>  recommendCourse(User user, MovingSpotDTO.WalkPref pref){
+    public WalkCourseRes  recommendCourse(User user, MovingSpotDTO.WalkPref pref){
 
         long ver = getUserRecVersion(user.getId());
-        String placeKey = buildPlaceKey(user.getId(), ver);
+        String catalogKey = PLACES_CATALOG_KEY_FMT.formatted(user.getId(), ver);
         String routeKey = buildRouteKey(user.getId(), ver);
 
         final String prefHashKey = ROUTES_PREF_HASH_FMT.formatted(user.getId(), ver);
@@ -119,7 +136,7 @@ public class MovingSpotService {
             if (currentHash.equals(savedHash)) {
                 String cachedRoute = redis.opsForValue().get(routeKey);
                 if (cachedRoute != null && !cachedRoute.isBlank()) {
-                    return om.readValue(cachedRoute, new TypeReference<List<WalkCourseRes>>() {});
+                    return om.readValue(cachedRoute, new TypeReference<WalkCourseRes>() {});
                 }
             }
         } catch (Exception ignore) {}
@@ -127,7 +144,7 @@ public class MovingSpotService {
         // 장소 캐시 조회
         List<RecommendRes> candidates;
         try{
-            String cached = redis.opsForValue().get(placeKey);
+            String cached = redis.opsForValue().get(catalogKey);
             if(cached == null || cached.isBlank()){
                 throw new IllegalStateException("추천 장소가 없습니다. 장소 추천을 받아주세요.");
             }
@@ -136,7 +153,7 @@ public class MovingSpotService {
             throw  new IllegalStateException("추천 장소 캐시 파싱 실패", e);
         }
 
-        final int radius = 800; // 300~800m 추천
+        final int radius = 1000; // 300~800m 추천
         List<RecommendRes> enriched = new ArrayList<>(candidates);
 
         for (RecommendRes base : candidates) {
@@ -162,7 +179,7 @@ public class MovingSpotService {
                 ));
 
         //경로 생성
-        List<WalkCourseRes> result = openAIClient.generateWalkCourses(enriched, pref);
+        WalkCourseRes result = openAIClient.generateWalkCourses(enriched, pref);
 
         // 경로 캐시 저장
         try{
@@ -179,8 +196,9 @@ public class MovingSpotService {
     }
 
     // 장소 캐시 키
-    private String buildPlaceKey(Long userId,  long ver) {
-        return PLACES_KEY_FMT.formatted(userId, ver);
+    private String buildPlaceKey(Long userId,  long ver, String query) {
+        String qhash = Integer.toHexString((query == null ? "":query.trim().toLowerCase()).hashCode());
+        return PLACES_KEY_FMT.formatted(userId, ver, qhash);
     }
 
     // Pref 해시 생성
