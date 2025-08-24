@@ -54,6 +54,8 @@ public class ChallengeService {
             Challenge ch = switch(activity){
                 case WALKING -> createWalkChallenge(level);
                 case RUNNING -> createRunChallenge(level);
+                case PAUSE -> null;
+                case END -> null;
             };
             list.add(ch);
         }

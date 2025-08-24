@@ -6,6 +6,7 @@ import com.sku_likelion.Moving_Cash_back.domain.Summary;
 import com.sku_likelion.Moving_Cash_back.domain.User;
 import com.sku_likelion.Moving_Cash_back.dto.request.MovingReqDTO;
 import com.sku_likelion.Moving_Cash_back.dto.response.MovingResDTO;
+import com.sku_likelion.Moving_Cash_back.enums.ActivityType;
 import com.sku_likelion.Moving_Cash_back.exception.InvalidIdException;
 import com.sku_likelion.Moving_Cash_back.repository.RoutePointRepository;
 import com.sku_likelion.Moving_Cash_back.repository.SessionRepository;
@@ -78,8 +79,10 @@ public class MovingService {
     */
     @Transactional
     public MovingResDTO.SessionEndDTO end(User user, MovingReqDTO.SessionEndDTO sessionEndReqDTO){
-        Long newPoint = user.getPoint()+sessionEndReqDTO.getPoints();
-        user.setPoint(newPoint);
+        if (sessionEndReqDTO.getMovingStatus()== ActivityType.END) {
+            Long newPoint = user.getPoint()+sessionEndReqDTO.getPoints();
+            user.setPoint(newPoint);
+        }
         userRepository.save(user);
         Session session = sessionRepository.findByUser(user);
         session.setEndTime(LocalDateTime.now());

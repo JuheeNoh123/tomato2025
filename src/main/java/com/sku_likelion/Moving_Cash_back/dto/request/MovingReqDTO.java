@@ -50,6 +50,7 @@ public class MovingReqDTO {
 
     @Data
     public static class SessionEndDTO{
+        private ActivityType movingStatus;
         private double totalCalories;
         private double totalDistance;
         private double pace;
