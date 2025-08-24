@@ -59,7 +59,7 @@ public class OpenAIClient {
         당신은 지역 명소(POI: Point of Interest) 재랭킹 전문가입니다.
         주어진 후보 장소 목록을 기반으로, 필요하다면 웹 검색을 통해 대중적으로 알려지거나
         좋은 평가를 받은 곳을 파악하고 각 장소의 점수를 0~100 사이의 점수로 매기고
-        웹 서칭을 통해 장소를 고른이유와 점수를 왜 그렇게 줬는지 자세하게 reason에 작성해, 
+        웹 서칭을 통해 장소를 고른이유와 점수를 왜 그렇게 줬는지 자세하게 reason에 작성해,
         가장 높은 점수 순으로 반환하세요.
                                                                     
         반드시 다음 '정확한' JSON 배열만 반환해야 합니다(설명/마크다운 금지).
@@ -235,7 +235,7 @@ public class OpenAIClient {
     }
 
     //추천 경로 만들기
-    public List<MovingSpotDTO.WalkCourseRes> generateWalkCourses(List<MovingSpotDTO.RecommendRes> candidates, WalkPref pref){
+    public MovingSpotDTO.WalkCourseRes generateWalkCourses(List<MovingSpotDTO.RecommendRes> candidates, WalkPref pref){
         if (candidates == null || candidates.isEmpty()) {
             throw new IllegalStateException("코스 후보가 없습니다(캐시 없음).");
         }
@@ -248,22 +248,23 @@ public class OpenAIClient {
         }
 
         String  system = """
-    당신은 산책 코스 플래너입니다. 사용자의 조건에 맞춰 주어진 후보 장소들을 이어 1~3개의 산책 코스를 설계하세요.
+    당신은 산책 코스 플래너입니다. 사용자의 조건에 맞춰 주어진 후보 장소들을 이어 1개의 산책 코스를 설계하세요.
     결과는 무조건 JSON만 반환하세요. 코드펜스/설명 금지.
+    
     스키마:
-    [
-      {
-        "routeId":1     //1씩 증가
-        "waypoints": [{"name":"...","lat":...,"lng":...}],
-        "destination": {"name":"...", "lat":..., "lng":...}
-        //주의 : start(출발지)는 생성하지 말 것. 서버에서 주입함.
-      }
-    ]
+     {
+       "routeId":1     //1씩 증가
+       "waypoints": [{"name":"...","lat":...,"lng":...}],
+       "destination": {"name":"...", "lat":..., "lng":...}
+     }
+     //주의 : start(출발지)는 생성하지 말 것. 서버에서 주입함.
+     
     규칙:
     - 좌표(lat,lng)는 입력 후보의 값을 그대로 사용.
-    - waypoints는 '추천장소' + '주변POI'(공원/산책로/볼거리) 풀에서 선택.
-    -- destination은 의미있는 종착지(예: 넓은 공원, 산책 마무리하기 좋은 명소)로 선택.
-    - waypoints는 0~5개.
+    - waypoints는 '추천장소' + '주변POI(공원/산책로/볼거리)' 풀에서 선택.
+    - destination은 의미있는 종착지(예: 넓은 공원, 산책 마무리하기 좋은 명소)로 선택.
+    - 불필요한 왕복/되돌아감 최소화.
+    - waypoints는 1~5개.
     - JSON 외 어떠한 텍스트/마크다운도 금지.
     """;
 
@@ -281,8 +282,11 @@ public class OpenAIClient {
     %s
 
     작업:
-    - 조건에 가장 잘 맞는 코스를 1~3개 생성.
+    - 조건에 가장 잘 맞는 코스를 1개 생성.
     - waypoints/destination 각각을 후보 중에서 선택
+    - 난이도에 따라 각 장소 좌표를 확인해서 거리도 계산해서 난이도에 맞게 알아서 경로를 잘 짤것.
+    - 불필요한 왕복이나 되돌아 가는 경로는 최소화할 것.
+    - 예를 들어 테마가 반려동물 동반이라면 각 장소정보를 확인하여 반려동물 동반이 가능한 장소를 뽑아야함.
     """.formatted(
             nvl(themes), nvl(difficulties), nvl(conditions), candsJson
         );
@@ -356,18 +360,16 @@ public class OpenAIClient {
         String cleaned = sanitizeJsonArray(out);
 
         try {
-            List<MovingSpotDTO.WalkCourseRes> courses = om.readValue(cleaned, new TypeReference<List<MovingSpotDTO.WalkCourseRes>>() {});
+            MovingSpotDTO.WalkCourseRes courses = om.readValue(cleaned, new TypeReference<MovingSpotDTO.WalkCourseRes>() {});
 
             BigDecimal curLat = pref.getLat();
             BigDecimal curLng = pref.getLng();
 
-            for (MovingSpotDTO.WalkCourseRes c : courses) {
-                MovingSpotDTO.Node start = new MovingSpotDTO.Node();
-                start.setName("출발지");
-                start.setLat(curLat);
-                start.setLng(curLng);
-                c.setStart(start);
-            }
+            MovingSpotDTO.Node start = new MovingSpotDTO.Node();
+            start.setName("출발지");
+            start.setLat(curLat);
+            start.setLng(curLng);
+            courses.setStart(start);
 
             return courses;
 

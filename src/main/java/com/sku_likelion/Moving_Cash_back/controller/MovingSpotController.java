@@ -35,8 +35,8 @@ public class MovingSpotController {
     }
 
     @PostMapping("/courses")
-    public ResponseEntity<List<WalkCourseRes>> recommendCourses(@AuthenticationPrincipal User user, @RequestBody MovingSpotDTO.WalkPref pref){
-        List<WalkCourseRes> res = movingSpotService.recommendCourse(user, pref);
+    public ResponseEntity<WalkCourseRes> recommendCourses(@AuthenticationPrincipal User user, @RequestBody MovingSpotDTO.WalkPref pref){
+        WalkCourseRes res = movingSpotService.recommendCourse(user, pref);
         return ResponseEntity.ok(res);
     }
 
