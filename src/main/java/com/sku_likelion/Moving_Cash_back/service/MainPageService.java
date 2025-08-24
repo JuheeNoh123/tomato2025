@@ -10,6 +10,7 @@ import com.sku_likelion.Moving_Cash_back.repository.RoutePointRepository;
 import com.sku_likelion.Moving_Cash_back.repository.SessionRepository;
 import com.sku_likelion.Moving_Cash_back.repository.SummaryRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cglib.core.Local;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -31,7 +32,10 @@ public class MainPageService {
         MainPageDTO.mainPageRes mainPageRes = new MainPageDTO.mainPageRes();
         mainPageRes.setName(user.getName());
         mainPageRes.setPoints(user.getPoint());
-        List<Summary> summaryList = summaryRepository.findByUserAndCreatedAtBetween(user, req.getStartDate(), req.getEndDate());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        String startDay = req.getStartDate().format(formatter);
+        String endDay = req.getEndDate().format(formatter);
+        List<Summary> summaryList = summaryRepository.findByUserAndCreatedAtBetween(user.getId(), startDay, endDay);
         Set<LocalDate> resActivityDate = new HashSet<>();
         for (Summary summary : summaryList) {
             resActivityDate.add(summary.getCreatedAt().toLocalDate());
@@ -43,7 +47,6 @@ public class MainPageService {
         LocalDateTime endOfDay = today.plusDays(1).atStartOfDay(); // 다음 날 00:00:00
 
 
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String startStr = startOfDay.format(formatter);
         String endStr = endOfDay.format(formatter);
 

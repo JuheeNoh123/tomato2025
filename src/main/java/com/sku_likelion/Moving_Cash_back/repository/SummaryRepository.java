@@ -15,7 +15,16 @@ import java.util.Optional;
 
 @Repository
 public interface SummaryRepository extends JpaRepository<Summary, Long> {
-    List<Summary> findByUserAndCreatedAtBetween(User user, LocalDateTime startDate, LocalDateTime endDate);
+    @Query(value = "SELECT *  FROM summary " +
+            "WHERE user_id = :userId " +
+            "AND created_at >= :start " +
+            "AND created_at < :end", nativeQuery = true)
+    List<Summary> findByUserAndCreatedAtBetween(
+            @Param("userId") Long userId,
+            @Param("start") String start,
+            @Param("end") String end
+    );
+    //List<Summary> findByUserAndCreatedAtBetween(User user, LocalDateTime startDate, LocalDateTime endDate);
 
     @Query(value = "SELECT COALESCE(SUM(total_calories),0) , coalesce(SUM(total_distance),0) , coalesce(SUM(steps),0)  FROM summary " +
             "WHERE user_id = :userId " +
