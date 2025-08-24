@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class MovingResDTO {
 
@@ -36,7 +37,7 @@ public class MovingResDTO {
         private double totalCalories; // kcal
         private double pace; // min/km
         private Long points; // 실시간 포인트
-
+        private List<MainPageDTO.position> routePoints;
     }
 
     @Data

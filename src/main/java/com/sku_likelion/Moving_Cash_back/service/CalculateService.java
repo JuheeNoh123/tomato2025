@@ -34,7 +34,7 @@ public class CalculateService {
         // Redis에서 기존 러닝 통계 가져오기 없으면 초기값 설정
         MovingResDTO.RunningStats stats = Objects.requireNonNullElse(
                                             (MovingResDTO.RunningStats) redisTemplate.opsForValue().get(redisKey),
-                                            new MovingResDTO.RunningStats(0, 0, 0, 0L));
+                                            new MovingResDTO.RunningStats(0, 0, 0, 0L, null));
 
 
         // DB에서 현재 세션의 마지막 위치 포인트 가져오기 (최근 index 기준)

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sku_likelion.Moving_Cash_back.domain.Session;
 import com.sku_likelion.Moving_Cash_back.domain.User;
 import com.sku_likelion.Moving_Cash_back.dto.request.MovingReqDTO;
+import com.sku_likelion.Moving_Cash_back.dto.response.MainPageDTO;
 import com.sku_likelion.Moving_Cash_back.dto.response.MovingResDTO;
 import com.sku_likelion.Moving_Cash_back.repository.SessionRepository;
 import com.sku_likelion.Moving_Cash_back.security.JwtUtility;
@@ -16,6 +17,7 @@ import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
+import java.util.List;
 
 @Component
 @RequiredArgsConstructor
@@ -67,6 +69,9 @@ public class LocationWebSocketHandler extends TextWebSocketHandler {
         MovingResDTO.RunningStats stats = calculateService.updateStats(dto, session);
         dto.setDistance(stats.getTotalDistance());
         movingService.saveRoutePoint(dto);
+
+        List<MainPageDTO.position> routePoints = movingService.getRoutePoints(session);
+        stats.setRoutePoints(routePoints);
         // 서버에서 클라이언트에게 응답
         socketSession.sendMessage(new TextMessage(objectMapper.writeValueAsString(stats)));
     }

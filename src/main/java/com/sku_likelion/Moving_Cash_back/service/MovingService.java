@@ -4,6 +4,7 @@ import com.sku_likelion.Moving_Cash_back.domain.RoutePoint;
 import com.sku_likelion.Moving_Cash_back.domain.Session;
 import com.sku_likelion.Moving_Cash_back.domain.Summary;
 import com.sku_likelion.Moving_Cash_back.domain.User;
+import com.sku_likelion.Moving_Cash_back.dto.response.MainPageDTO;
 import com.sku_likelion.Moving_Cash_back.dto.request.MovingReqDTO;
 import com.sku_likelion.Moving_Cash_back.dto.response.MovingResDTO;
 import com.sku_likelion.Moving_Cash_back.enums.ActivityType;
@@ -70,6 +71,18 @@ public class MovingService {
         routePointRepository.save(routePoint);
     }
 
+    public List<MainPageDTO.position> getRoutePoints(Session session){
+        List<RoutePoint> routePointList = routePointRepository.findBySession(session);
+        List<MainPageDTO.position> positions = new ArrayList<>();
+        for (RoutePoint routePoint : routePointList) {
+            MainPageDTO.position position = new MainPageDTO.position();
+            position.setLat(routePoint.getLat());
+            position.setLng(routePoint.getLng());
+            positions.add(position);
+        }
+        return positions;
+
+    }
     //세션 종료 (달리기/러닝 종료)
     /*로직
     1. 유저 테이블에 포인트 누적
